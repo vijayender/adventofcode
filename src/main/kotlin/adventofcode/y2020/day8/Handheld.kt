@@ -53,18 +53,18 @@ fun runUntilRepeat(handheld: Handheld): Handheld {
 }
 
 fun doesItWork(instructions: Array<Instruction>): Handheld? =
-    try {
-        println(instructions.toList())
-        val handheld = runUntilRepeat(Handheld(instructions + listOf(Instruction(InstructionType.TER, 0))))
-        println("received: ${handheld.exited} ${handheld.executionPoint} ${handheld.accumulator}")
-        if(handheld.exited)
-            handheld
-        else
+        try {
+            println(instructions.toList())
+            val handheld = runUntilRepeat(Handheld(instructions + listOf(Instruction(InstructionType.TER, 0))))
+            println("received: ${handheld.exited} ${handheld.executionPoint} ${handheld.accumulator}")
+            if (handheld.exited)
+                handheld
+            else
+                null
+        } catch (e: Exception) {
+            println(e.message)
             null
-    } catch (e: Exception) {
-        println(e.message)
-        null
-    }
+        }
 
 
 fun main(args: Array<String>) {
@@ -73,37 +73,30 @@ fun main(args: Array<String>) {
             .lines()
             .filter { it.isNotBlank() }
             .map {
-                val args = it.split(" ")
-                Instruction(
-                        InstructionType.valueOf(args[0].toUpperCase()),
-                        args[1].toInt()
-                )
+                val splits = it.split(" ")
+                Instruction(InstructionType.valueOf(splits[0].toUpperCase()), splits[1].toInt())
             }.toTypedArray()
     val final = runUntilRepeat(Handheld(instructions))
     println("Final value: ${final.accumulator} at ${final.executionPoint}")
 
-    for(index in instructions.indices) {
+    for (index in instructions.indices) {
         println("trial with: $index")
-        val handheld = when(instructions[index].type) {
-            InstructionType.JMP -> {
-                val testInstructions = instructions.clone().apply {
-                    this[index] = this[index].copy(type = InstructionType.NOP)
-                }
-                doesItWork(testInstructions)
-            }
-            InstructionType.NOP -> {
-                val testInstructions = instructions.clone().apply {
-                    this[index] = this[index].copy(type = InstructionType.JMP)
-                }
-                doesItWork(testInstructions)
-            }
+        val handheldFinalState = when (instructions[index].type) {
+            InstructionType.JMP ->
+                doesItWork(instructions.swap(index, InstructionType.NOP))
+            InstructionType.NOP ->
+                doesItWork(instructions.swap(index, InstructionType.JMP))
             else -> null
         }
-        if(handheld != null) {
-            println("Finally $index ${handheld.accumulator} ${handheld.executionPoint}")
+        if (handheldFinalState != null) {
+            println("Finally $index ${handheldFinalState.accumulator} ${handheldFinalState.executionPoint}")
             return
         }
     }
     println("didn't find anything")
     exitProcess(-1)
+}
+
+private fun Array<Instruction>.swap(index: Int, type: InstructionType) = this.clone().apply {
+    this[index] = this[index].copy(type = type)
 }
